@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
@@ -37,7 +37,13 @@ contract MapTest is Test {
             address(1),
             address(2)
         );
-        map = new Map(size, 5, mapBaseUri, address(utils), address(forwarder));
+        map = new Map(
+            size,
+            perSize,
+            mapBaseUri,
+            address(utils),
+            address(forwarder)
+        );
         for (uint256 i = 0; i < utilCount; i++) {
             utils.mint(utilAmount);
         }

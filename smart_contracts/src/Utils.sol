@@ -23,7 +23,6 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
     string public baseUri;
     uint256 public utilCount;
     IERC20 public immutable i_link;
-    // IRouterClient public immutable i_router;
     mapping(uint64 => address) public chains;
     mapping(uint64 => uint64) public chainIdToChainSelector;
 
@@ -39,7 +38,6 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
         CCIPReceiver(_router)
     {
         baseUri = _baseUri;
-        // i_router = IRouterClient(_router);
         i_link = IERC20(_linkAddress);
     }
 
@@ -56,6 +54,7 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
         uint tokenId,
         uint amount
     ) public payable returns (bytes32 messageId) {
+        // NOTE: I think this is a bug, it should be chains[destinationChain]
         address destinationAddress = chains[
             chainIdToChainSelector[destinationChain]
         ];
