@@ -13,6 +13,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@chainlink/contracts": "^0.8.0",
+    "@chainlink/contracts-ccip": "^1.2.1",
     "@nomicfoundation/hardhat-foundry": "^1.1.1",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "hardhat": "^2.19.5"
