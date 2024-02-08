@@ -23,7 +23,7 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
     string public baseUri;
     uint256 public utilCount;
     IERC20 public immutable i_link;
-    mapping(uint64 => address) public chains;
+    mapping(uint64 => address) public chainSelectorToContractAddress;
     mapping(uint64 => uint64) public chainIdToChainSelector;
 
     constructor(
@@ -41,11 +41,17 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
         i_link = IERC20(_linkAddress);
     }
 
-    function setChain(uint64 chain, address addr) public onlyOwner {
-        chains[chain] = addr;
+    function setChainSelectorToContractAddress(
+        uint64 chain,
+        address addr
+    ) public onlyOwner {
+        chainSelectorToContractAddress[chain] = addr;
     }
 
-    function setChainSelector(uint64 chain, uint64 selector) public onlyOwner {
+    function setChainIdToChainSelector(
+        uint64 chain,
+        uint64 selector
+    ) public onlyOwner {
         chainIdToChainSelector[chain] = selector;
     }
 
@@ -54,9 +60,9 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
         uint tokenId,
         uint amount
     ) public payable returns (bytes32 messageId) {
-        // NOTE: I think this is a bug, it should be chains[destinationChain]
-        address destinationAddress = chains[
-            chainIdToChainSelector[destinationChain]
+        uint64 chainSelector = chainIdToChainSelector[destinationChain];
+        address destinationAddress = chainSelectorToContractAddress[
+            chainSelector
         ];
         if (destinationAddress != address(0)) {
             revert InvalidChain();
@@ -83,7 +89,7 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
 
         // Get the fee required to send the message
         uint256 fees = IRouterClient(i_router).getFee(
-            chainIdToChainSelector[destinationChain],
+            chainSelector,
             evm2AnyMessage
         );
 
@@ -105,10 +111,8 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
         if (
             keccak256(
                 abi.encodePacked(
-                    chains[
-                        chainIdToChainSelector[
-                            any2EvmMessage.sourceChainSelector
-                        ]
+                    chainSelectorToContractAddress[
+                        any2EvmMessage.sourceChainSelector
                     ]
                 )
             ) !=
@@ -140,8 +144,9 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
         uint amount,
         address msgSender
     ) external view returns (uint256 fees) {
-        address destinationAddress = chains[
-            chainIdToChainSelector[destinationChain]
+        uint64 chainSelector = chainIdToChainSelector[destinationChain];
+        address destinationAddress = chainSelectorToContractAddress[
+            chainSelector
         ];
 
         bytes memory payload = abi.encode(tokenId, amount, msgSender);
@@ -160,10 +165,7 @@ contract Utils is ERC2771Context, ERC1155, Ownable, CCIPReceiver {
         });
 
         // Get the fee required to send the message
-        fees = IRouterClient(i_router).getFee(
-            chainIdToChainSelector[destinationChain],
-            evm2AnyMessage
-        );
+        fees = IRouterClient(i_router).getFee(chainSelector, evm2AnyMessage);
     }
 
     // Add `virtual` to function signature of `supportsInterface` function in CCIPReceiver.sol
