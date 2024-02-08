@@ -2,14 +2,16 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-optimizer = true
-optimizer_runs = 20_000
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
-[rpc_endpoints]
-arbitrumFuji = "${AVALANCHE_FUJI_TESTNET_RPC_URL}"
+optimizer = true
+optimizer_runs = 20_000
+fs_permissions = [{ access = "read", path = "./broadcast" }]
 
-[etherscan]
-arbitrumFuji = { key = "${AVALANCHE_FUJI_TESTNET_API_KEY}" }
+# [rpc_endpoints]
+# arbitrumFuji = "${AVALANCHE_FUJI_TESTNET_RPC_URL}"
+# 
+# [etherscan]
+# arbitrumFuji = { key = "${AVALANCHE_FUJI_TESTNET_API_KEY}", url = "https://api.avascan.info/v2/network/testnet/evm/43113/etherscan" }
 
