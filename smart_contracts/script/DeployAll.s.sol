@@ -167,7 +167,6 @@ contract DeployAll is Script {
                 TRANSFER_UTILS_AMOUNT,
                 ""
             );
-            (address(faucet), TRANSFER_UTILS_AMOUNT);
             vm.stopBroadcast();
         }
     }
