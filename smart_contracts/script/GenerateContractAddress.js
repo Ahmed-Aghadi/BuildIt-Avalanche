@@ -12,6 +12,16 @@ function ensureDirectoryExistence(filePath) {
   fs.mkdirSync(dirname);
 }
 
+// NOTE: maybe we should use this in HelperConfig.s.sol so that we have a single source of truth
+const EXTRA_ADDRESSES = {
+  43113: {
+    LinkToken: "0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846",
+  },
+  11155111: {
+    LinkToken: "0x779877A7B0D9E8603169DdbD7836e478b4624789",
+  },
+};
+
 async function main() {
   const broadcastFiles = fs.readdirSync("./broadcast/DeployAll.s.sol");
   const addresses = {};
@@ -29,6 +39,10 @@ async function main() {
       }
     }
     addresses[chainId] = currentAddresses;
+    addresses[chainId] = {
+      ...addresses[chainId],
+      ...EXTRA_ADDRESSES[chainId],
+    };
   }
   console.log(addresses);
   const addressFile = path.join(
