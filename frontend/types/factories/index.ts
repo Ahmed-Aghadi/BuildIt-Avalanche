@@ -3,6 +3,7 @@
 /* eslint-disable */
 export { Faucet__factory } from "./Faucet__factory";
 export { Forwarder__factory } from "./Forwarder__factory";
+export { LinkTokenInterface__factory } from "./LinkTokenInterface__factory";
 export { Map__factory } from "./Map__factory";
 export { Marketplace__factory } from "./Marketplace__factory";
 export { Utils__factory } from "./Utils__factory";
