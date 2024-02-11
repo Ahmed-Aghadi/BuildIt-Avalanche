@@ -36,7 +36,9 @@ export const AuthCore = () => {
       language={"en"} //optional：localize, default en
       walletSort={["Particle Auth", "Wallet"]} //optional：walelt order
     >
-      <MainSection />
+      <div className="min-h-screen">
+        <MainSection />
+      </div>
     </ModalProvider>
   );
 };
