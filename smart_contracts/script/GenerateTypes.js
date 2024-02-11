@@ -19,7 +19,8 @@ async function main() {
     filesToProcess: allFiles,
     allFiles,
     outDir: FRONTEND_TYPES_DIR,
-    target: "ethers-v6",
+    // I wasn't able to detect network changes in v6. So I'm using v5 for now.
+    target: "ethers-v5", // "ethers-v6",
   });
   console.log(result);
 }

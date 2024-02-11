@@ -21,5 +21,8 @@
     "glob": "^10.3.10",
     "hardhat": "^2.19.5",
     "typechain": "^8.3.2"
+  },
+  "dependencies": {
+    "@typechain/ethers-v5": "^11.1.2"
   }
 }
