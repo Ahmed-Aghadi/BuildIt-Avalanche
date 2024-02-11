@@ -3,27 +3,58 @@
 /* eslint-disable */
 import type {
   BaseContract,
+  BigNumber,
   BigNumberish,
   BytesLike,
-  FunctionFragment,
-  Result,
-  Interface,
-  AddressLike,
-  ContractRunner,
-  ContractMethod,
-  Listener,
+  CallOverrides,
+  ContractTransaction,
+  Overrides,
+  PayableOverrides,
+  PopulatedTransaction,
+  Signer,
+  utils,
 } from "ethers";
+import type { FunctionFragment, Result } from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
 import type {
-  TypedContractEvent,
-  TypedDeferredTopicFilter,
-  TypedEventLog,
+  TypedEventFilter,
+  TypedEvent,
   TypedListener,
-  TypedContractMethod,
+  OnEvent,
 } from "./common";
 
-export interface MarketplaceInterface extends Interface {
+export interface MarketplaceInterface extends utils.Interface {
+  functions: {
+    "auctionBalance(address)": FunctionFragment;
+    "balances(address)": FunctionFragment;
+    "bid(uint256)": FunctionFragment;
+    "buyListing(uint256)": FunctionFragment;
+    "calculateWinner(uint256)": FunctionFragment;
+    "checkUpkeep(bytes)": FunctionFragment;
+    "createListing(bool,uint256,uint256,bool,uint256,uint96)": FunctionFragment;
+    "deleteListing(uint256)": FunctionFragment;
+    "eth_usd_priceFeed()": FunctionFragment;
+    "gasLimit()": FunctionFragment;
+    "getPrice(uint256)": FunctionFragment;
+    "highestBid(uint256)": FunctionFragment;
+    "i_link()": FunctionFragment;
+    "i_registrar()": FunctionFragment;
+    "invalidateAuctionBid(uint256)": FunctionFragment;
+    "isListingValid(uint256)": FunctionFragment;
+    "isTrustedForwarder(address)": FunctionFragment;
+    "listingCount()": FunctionFragment;
+    "listingToUpkeepID(uint256)": FunctionFragment;
+    "listings(uint256)": FunctionFragment;
+    "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)": FunctionFragment;
+    "onERC1155Received(address,address,uint256,uint256,bytes)": FunctionFragment;
+    "onERC721Received(address,address,uint256,bytes)": FunctionFragment;
+    "performUpkeep(bytes)": FunctionFragment;
+    "trustedForwarder()": FunctionFragment;
+    "withdraw()": FunctionFragment;
+  };
+
   getFunction(
-    nameOrSignature:
+    nameOrSignatureOrTopic:
       | "auctionBalance"
       | "balances"
       | "bid"
@@ -54,12 +85,9 @@ export interface MarketplaceInterface extends Interface {
 
   encodeFunctionData(
     functionFragment: "auctionBalance",
-    values: [AddressLike]
+    values: [string]
   ): string;
-  encodeFunctionData(
-    functionFragment: "balances",
-    values: [AddressLike]
-  ): string;
+  encodeFunctionData(functionFragment: "balances", values: [string]): string;
   encodeFunctionData(functionFragment: "bid", values: [BigNumberish]): string;
   encodeFunctionData(
     functionFragment: "buyListing",
@@ -116,7 +144,7 @@ export interface MarketplaceInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "isTrustedForwarder",
-    values: [AddressLike]
+    values: [string]
   ): string;
   encodeFunctionData(
     functionFragment: "listingCount",
@@ -132,21 +160,15 @@ export interface MarketplaceInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "onERC1155BatchReceived",
-    values: [
-      AddressLike,
-      AddressLike,
-      BigNumberish[],
-      BigNumberish[],
-      BytesLike
-    ]
+    values: [string, string, BigNumberish[], BigNumberish[], BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "onERC1155Received",
-    values: [AddressLike, AddressLike, BigNumberish, BigNumberish, BytesLike]
+    values: [string, string, BigNumberish, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "onERC721Received",
-    values: [AddressLike, AddressLike, BigNumberish, BytesLike]
+    values: [string, string, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "performUpkeep",
@@ -235,329 +257,713 @@ export interface MarketplaceInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
+
+  events: {};
 }
 
 export interface Marketplace extends BaseContract {
-  connect(runner?: ContractRunner | null): Marketplace;
-  waitForDeployment(): Promise<this>;
+  connect(signerOrProvider: Signer | Provider | string): this;
+  attach(addressOrName: string): this;
+  deployed(): Promise<this>;
 
   interface: MarketplaceInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
+  queryFilter<TEvent extends TypedEvent>(
+    event: TypedEventFilter<TEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<TEvent>>;
 
-  on<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  listeners<TEvent extends TypedEvent>(
+    eventFilter?: TypedEventFilter<TEvent>
+  ): Array<TypedListener<TEvent>>;
+  listeners(eventName?: string): Array<Listener>;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
+  removeAllListeners(eventName?: string): this;
+  off: OnEvent<this>;
+  on: OnEvent<this>;
+  once: OnEvent<this>;
+  removeListener: OnEvent<this>;
 
-  once<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  functions: {
+    auctionBalance(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
-  listeners<TCEvent extends TypedContractEvent>(
-    event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
-  listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
-    event?: TCEvent
-  ): Promise<this>;
+    balances(arg0: string, overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  auctionBalance: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+    bid(
+      listingId: BigNumberish,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  balances: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+    buyListing(
+      listingId: BigNumberish,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  bid: TypedContractMethod<[listingId: BigNumberish], [void], "payable">;
+    calculateWinner(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  buyListing: TypedContractMethod<[listingId: BigNumberish], [void], "payable">;
+    checkUpkeep(
+      checkData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [boolean, string] & { upkeepNeeded: boolean; performData: string }
+    >;
 
-  calculateWinner: TypedContractMethod<
-    [listingId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  checkUpkeep: TypedContractMethod<
-    [checkData: BytesLike],
-    [[boolean, string] & { upkeepNeeded: boolean; performData: string }],
-    "view"
-  >;
-
-  createListing: TypedContractMethod<
-    [
+    createListing(
       inUSD: boolean,
       tokenId: BigNumberish,
       price: BigNumberish,
       isAuction: boolean,
       auctionTime: BigNumberish,
-      amount: BigNumberish
-    ],
-    [void],
-    "nonpayable"
-  >;
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  deleteListing: TypedContractMethod<
-    [listingId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    deleteListing(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  eth_usd_priceFeed: TypedContractMethod<[], [string], "view">;
+    eth_usd_priceFeed(overrides?: CallOverrides): Promise<[string]>;
 
-  gasLimit: TypedContractMethod<[], [bigint], "view">;
+    gasLimit(overrides?: CallOverrides): Promise<[number]>;
 
-  getPrice: TypedContractMethod<[listingId: BigNumberish], [bigint], "view">;
+    getPrice(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
-  highestBid: TypedContractMethod<
-    [arg0: BigNumberish],
-    [[string, bigint] & { bidder: string; amount: bigint }],
-    "view"
-  >;
+    highestBid(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string, BigNumber] & { bidder: string; amount: BigNumber }>;
 
-  i_link: TypedContractMethod<[], [string], "view">;
+    i_link(overrides?: CallOverrides): Promise<[string]>;
 
-  i_registrar: TypedContractMethod<[], [string], "view">;
+    i_registrar(overrides?: CallOverrides): Promise<[string]>;
 
-  invalidateAuctionBid: TypedContractMethod<
-    [listingId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    invalidateAuctionBid(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  isListingValid: TypedContractMethod<
-    [listingId: BigNumberish],
-    [boolean],
-    "view"
-  >;
+    isListingValid(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  isTrustedForwarder: TypedContractMethod<
-    [forwarder: AddressLike],
-    [boolean],
-    "view"
-  >;
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  listingCount: TypedContractMethod<[], [bigint], "view">;
+    listingCount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  listingToUpkeepID: TypedContractMethod<
-    [arg0: BigNumberish],
-    [bigint],
-    "view"
-  >;
+    listingToUpkeepID(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
-  listings: TypedContractMethod<
-    [arg0: BigNumberish],
-    [
-      [string, boolean, bigint, bigint, bigint, boolean, boolean, bigint] & {
+    listings(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        string,
+        boolean,
+        BigNumber,
+        BigNumber,
+        BigNumber,
+        boolean,
+        boolean,
+        BigNumber
+      ] & {
         seller: string;
         inUSD: boolean;
-        tokenId: bigint;
-        price: bigint;
-        timestamp: bigint;
+        tokenId: BigNumber;
+        price: BigNumber;
+        timestamp: BigNumber;
         isValid: boolean;
         isAuction: boolean;
-        aucionTime: bigint;
+        aucionTime: BigNumber;
       }
-    ],
-    "view"
-  >;
+    >;
 
-  onERC1155BatchReceived: TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish[],
       arg3: BigNumberish[],
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  onERC1155Received: TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish,
       arg3: BigNumberish,
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    onERC721Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    performUpkeep(
+      performData: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<[string]>;
+
+    withdraw(
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+  };
+
+  auctionBalance(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+  balances(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+  bid(
+    listingId: BigNumberish,
+    overrides?: PayableOverrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  buyListing(
+    listingId: BigNumberish,
+    overrides?: PayableOverrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  calculateWinner(
+    listingId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  checkUpkeep(
+    checkData: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<
+    [boolean, string] & { upkeepNeeded: boolean; performData: string }
   >;
 
-  onERC721Received: TypedContractMethod<
-    [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BytesLike],
-    [string],
-    "nonpayable"
-  >;
+  createListing(
+    inUSD: boolean,
+    tokenId: BigNumberish,
+    price: BigNumberish,
+    isAuction: boolean,
+    auctionTime: BigNumberish,
+    amount: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
-  performUpkeep: TypedContractMethod<
-    [performData: BytesLike],
-    [void],
-    "nonpayable"
-  >;
+  deleteListing(
+    listingId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
-  trustedForwarder: TypedContractMethod<[], [string], "view">;
+  eth_usd_priceFeed(overrides?: CallOverrides): Promise<string>;
 
-  withdraw: TypedContractMethod<[], [void], "nonpayable">;
+  gasLimit(overrides?: CallOverrides): Promise<number>;
 
-  getFunction<T extends ContractMethod = ContractMethod>(
-    key: string | FunctionFragment
-  ): T;
+  getPrice(
+    listingId: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
-  getFunction(
-    nameOrSignature: "auctionBalance"
-  ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "balances"
-  ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "bid"
-  ): TypedContractMethod<[listingId: BigNumberish], [void], "payable">;
-  getFunction(
-    nameOrSignature: "buyListing"
-  ): TypedContractMethod<[listingId: BigNumberish], [void], "payable">;
-  getFunction(
-    nameOrSignature: "calculateWinner"
-  ): TypedContractMethod<[listingId: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "checkUpkeep"
-  ): TypedContractMethod<
-    [checkData: BytesLike],
-    [[boolean, string] & { upkeepNeeded: boolean; performData: string }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "createListing"
-  ): TypedContractMethod<
+  highestBid(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<[string, BigNumber] & { bidder: string; amount: BigNumber }>;
+
+  i_link(overrides?: CallOverrides): Promise<string>;
+
+  i_registrar(overrides?: CallOverrides): Promise<string>;
+
+  invalidateAuctionBid(
+    listingId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  isListingValid(
+    listingId: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  isTrustedForwarder(
+    forwarder: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  listingCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+  listingToUpkeepID(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
+  listings(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<
     [
+      string,
+      boolean,
+      BigNumber,
+      BigNumber,
+      BigNumber,
+      boolean,
+      boolean,
+      BigNumber
+    ] & {
+      seller: string;
+      inUSD: boolean;
+      tokenId: BigNumber;
+      price: BigNumber;
+      timestamp: BigNumber;
+      isValid: boolean;
+      isAuction: boolean;
+      aucionTime: BigNumber;
+    }
+  >;
+
+  onERC1155BatchReceived(
+    arg0: string,
+    arg1: string,
+    arg2: BigNumberish[],
+    arg3: BigNumberish[],
+    arg4: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  onERC1155Received(
+    arg0: string,
+    arg1: string,
+    arg2: BigNumberish,
+    arg3: BigNumberish,
+    arg4: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  onERC721Received(
+    arg0: string,
+    arg1: string,
+    arg2: BigNumberish,
+    arg3: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  performUpkeep(
+    performData: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  trustedForwarder(overrides?: CallOverrides): Promise<string>;
+
+  withdraw(
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  callStatic: {
+    auctionBalance(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    balances(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    bid(listingId: BigNumberish, overrides?: CallOverrides): Promise<void>;
+
+    buyListing(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    calculateWinner(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    checkUpkeep(
+      checkData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [boolean, string] & { upkeepNeeded: boolean; performData: string }
+    >;
+
+    createListing(
       inUSD: boolean,
       tokenId: BigNumberish,
       price: BigNumberish,
       isAuction: boolean,
       auctionTime: BigNumberish,
-      amount: BigNumberish
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "deleteListing"
-  ): TypedContractMethod<[listingId: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "eth_usd_priceFeed"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "gasLimit"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "getPrice"
-  ): TypedContractMethod<[listingId: BigNumberish], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "highestBid"
-  ): TypedContractMethod<
-    [arg0: BigNumberish],
-    [[string, bigint] & { bidder: string; amount: bigint }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "i_link"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "i_registrar"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "invalidateAuctionBid"
-  ): TypedContractMethod<[listingId: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "isListingValid"
-  ): TypedContractMethod<[listingId: BigNumberish], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "isTrustedForwarder"
-  ): TypedContractMethod<[forwarder: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "listingCount"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "listingToUpkeepID"
-  ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "listings"
-  ): TypedContractMethod<
-    [arg0: BigNumberish],
-    [
-      [string, boolean, bigint, bigint, bigint, boolean, boolean, bigint] & {
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    deleteListing(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    eth_usd_priceFeed(overrides?: CallOverrides): Promise<string>;
+
+    gasLimit(overrides?: CallOverrides): Promise<number>;
+
+    getPrice(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    highestBid(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string, BigNumber] & { bidder: string; amount: BigNumber }>;
+
+    i_link(overrides?: CallOverrides): Promise<string>;
+
+    i_registrar(overrides?: CallOverrides): Promise<string>;
+
+    invalidateAuctionBid(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    isListingValid(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    listingCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    listingToUpkeepID(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    listings(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        string,
+        boolean,
+        BigNumber,
+        BigNumber,
+        BigNumber,
+        boolean,
+        boolean,
+        BigNumber
+      ] & {
         seller: string;
         inUSD: boolean;
-        tokenId: bigint;
-        price: bigint;
-        timestamp: bigint;
+        tokenId: BigNumber;
+        price: BigNumber;
+        timestamp: BigNumber;
         isValid: boolean;
         isAuction: boolean;
-        aucionTime: bigint;
+        aucionTime: BigNumber;
       }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "onERC1155BatchReceived"
-  ): TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    >;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish[],
       arg3: BigNumberish[],
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "onERC1155Received"
-  ): TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+      arg4: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish,
       arg3: BigNumberish,
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "onERC721Received"
-  ): TypedContractMethod<
-    [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BytesLike],
-    [string],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "performUpkeep"
-  ): TypedContractMethod<[performData: BytesLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "trustedForwarder"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "withdraw"
-  ): TypedContractMethod<[], [void], "nonpayable">;
+      arg4: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    onERC721Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    performUpkeep(
+      performData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<string>;
+
+    withdraw(overrides?: CallOverrides): Promise<void>;
+  };
 
   filters: {};
+
+  estimateGas: {
+    auctionBalance(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    balances(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    bid(
+      listingId: BigNumberish,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    buyListing(
+      listingId: BigNumberish,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    calculateWinner(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    checkUpkeep(
+      checkData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    createListing(
+      inUSD: boolean,
+      tokenId: BigNumberish,
+      price: BigNumberish,
+      isAuction: boolean,
+      auctionTime: BigNumberish,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    deleteListing(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    eth_usd_priceFeed(overrides?: CallOverrides): Promise<BigNumber>;
+
+    gasLimit(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getPrice(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    highestBid(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    i_link(overrides?: CallOverrides): Promise<BigNumber>;
+
+    i_registrar(overrides?: CallOverrides): Promise<BigNumber>;
+
+    invalidateAuctionBid(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    isListingValid(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    listingCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    listingToUpkeepID(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    listings(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    onERC721Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    performUpkeep(
+      performData: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<BigNumber>;
+
+    withdraw(overrides?: Overrides & { from?: string }): Promise<BigNumber>;
+  };
+
+  populateTransaction: {
+    auctionBalance(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    balances(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    bid(
+      listingId: BigNumberish,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    buyListing(
+      listingId: BigNumberish,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    calculateWinner(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    checkUpkeep(
+      checkData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    createListing(
+      inUSD: boolean,
+      tokenId: BigNumberish,
+      price: BigNumberish,
+      isAuction: boolean,
+      auctionTime: BigNumberish,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    deleteListing(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    eth_usd_priceFeed(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    gasLimit(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    getPrice(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    highestBid(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    i_link(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    i_registrar(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    invalidateAuctionBid(
+      listingId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    isListingValid(
+      listingId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    listingCount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    listingToUpkeepID(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    listings(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    onERC721Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    performUpkeep(
+      performData: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    withdraw(
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+  };
 }

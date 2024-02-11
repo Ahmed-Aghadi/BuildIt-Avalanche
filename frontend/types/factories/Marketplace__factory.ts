@@ -2,19 +2,14 @@
 /* tslint:disable */
 /* eslint-disable */
 import {
+  Signer,
+  utils,
   Contract,
   ContractFactory,
-  ContractTransactionResponse,
-  Interface,
-} from "ethers";
-import type {
-  Signer,
   BigNumberish,
-  AddressLike,
-  ContractDeployTransaction,
-  ContractRunner,
+  Overrides,
 } from "ethers";
-import type { NonPayableOverrides } from "../common";
+import type { Provider, TransactionRequest } from "@ethersproject/providers";
 import type { Marketplace, MarketplaceInterface } from "../Marketplace";
 
 const _abi = [
@@ -700,16 +695,37 @@ export class Marketplace__factory extends ContractFactory {
     }
   }
 
-  override getDeployTransaction(
-    eth_usd_priceFeedAddress: AddressLike,
-    mapAddress: AddressLike,
-    utilsAddress: AddressLike,
-    _linkAddress: AddressLike,
-    _registrar: AddressLike,
+  override deploy(
+    eth_usd_priceFeedAddress: string,
+    mapAddress: string,
+    utilsAddress: string,
+    _linkAddress: string,
+    _registrar: string,
     _gasLimit: BigNumberish,
-    trustedForwarder: AddressLike,
-    overrides?: NonPayableOverrides & { from?: string }
-  ): Promise<ContractDeployTransaction> {
+    trustedForwarder: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<Marketplace> {
+    return super.deploy(
+      eth_usd_priceFeedAddress,
+      mapAddress,
+      utilsAddress,
+      _linkAddress,
+      _registrar,
+      _gasLimit,
+      trustedForwarder,
+      overrides || {}
+    ) as Promise<Marketplace>;
+  }
+  override getDeployTransaction(
+    eth_usd_priceFeedAddress: string,
+    mapAddress: string,
+    utilsAddress: string,
+    _linkAddress: string,
+    _registrar: string,
+    _gasLimit: BigNumberish,
+    trustedForwarder: string,
+    overrides?: Overrides & { from?: string }
+  ): TransactionRequest {
     return super.getDeployTransaction(
       eth_usd_priceFeedAddress,
       mapAddress,
@@ -721,41 +737,22 @@ export class Marketplace__factory extends ContractFactory {
       overrides || {}
     );
   }
-  override deploy(
-    eth_usd_priceFeedAddress: AddressLike,
-    mapAddress: AddressLike,
-    utilsAddress: AddressLike,
-    _linkAddress: AddressLike,
-    _registrar: AddressLike,
-    _gasLimit: BigNumberish,
-    trustedForwarder: AddressLike,
-    overrides?: NonPayableOverrides & { from?: string }
-  ) {
-    return super.deploy(
-      eth_usd_priceFeedAddress,
-      mapAddress,
-      utilsAddress,
-      _linkAddress,
-      _registrar,
-      _gasLimit,
-      trustedForwarder,
-      overrides || {}
-    ) as Promise<
-      Marketplace & {
-        deploymentTransaction(): ContractTransactionResponse;
-      }
-    >;
+  override attach(address: string): Marketplace {
+    return super.attach(address) as Marketplace;
   }
-  override connect(runner: ContractRunner | null): Marketplace__factory {
-    return super.connect(runner) as Marketplace__factory;
+  override connect(signer: Signer): Marketplace__factory {
+    return super.connect(signer) as Marketplace__factory;
   }
 
   static readonly bytecode = _bytecode;
   static readonly abi = _abi;
   static createInterface(): MarketplaceInterface {
-    return new Interface(_abi) as MarketplaceInterface;
+    return new utils.Interface(_abi) as MarketplaceInterface;
   }
-  static connect(address: string, runner?: ContractRunner | null): Marketplace {
-    return new Contract(address, _abi, runner) as unknown as Marketplace;
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): Marketplace {
+    return new Contract(address, _abi, signerOrProvider) as Marketplace;
   }
 }

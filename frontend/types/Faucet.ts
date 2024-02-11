@@ -3,27 +3,36 @@
 /* eslint-disable */
 import type {
   BaseContract,
+  BigNumber,
   BigNumberish,
   BytesLike,
-  FunctionFragment,
-  Result,
-  Interface,
-  AddressLike,
-  ContractRunner,
-  ContractMethod,
-  Listener,
+  CallOverrides,
+  ContractTransaction,
+  Overrides,
+  PopulatedTransaction,
+  Signer,
+  utils,
 } from "ethers";
+import type { FunctionFragment, Result } from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
 import type {
-  TypedContractEvent,
-  TypedDeferredTopicFilter,
-  TypedEventLog,
+  TypedEventFilter,
+  TypedEvent,
   TypedListener,
-  TypedContractMethod,
+  OnEvent,
 } from "./common";
 
-export interface FaucetInterface extends Interface {
+export interface FaucetInterface extends utils.Interface {
+  functions: {
+    "getToken(address,uint256)": FunctionFragment;
+    "isTrustedForwarder(address)": FunctionFragment;
+    "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)": FunctionFragment;
+    "onERC1155Received(address,address,uint256,uint256,bytes)": FunctionFragment;
+    "trustedForwarder()": FunctionFragment;
+  };
+
   getFunction(
-    nameOrSignature:
+    nameOrSignatureOrTopic:
       | "getToken"
       | "isTrustedForwarder"
       | "onERC1155BatchReceived"
@@ -33,25 +42,19 @@ export interface FaucetInterface extends Interface {
 
   encodeFunctionData(
     functionFragment: "getToken",
-    values: [AddressLike, BigNumberish]
+    values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "isTrustedForwarder",
-    values: [AddressLike]
+    values: [string]
   ): string;
   encodeFunctionData(
     functionFragment: "onERC1155BatchReceived",
-    values: [
-      AddressLike,
-      AddressLike,
-      BigNumberish[],
-      BigNumberish[],
-      BytesLike
-    ]
+    values: [string, string, BigNumberish[], BigNumberish[], BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "onERC1155Received",
-    values: [AddressLike, AddressLike, BigNumberish, BigNumberish, BytesLike]
+    values: [string, string, BigNumberish, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "trustedForwarder",
@@ -75,132 +78,198 @@ export interface FaucetInterface extends Interface {
     functionFragment: "trustedForwarder",
     data: BytesLike
   ): Result;
+
+  events: {};
 }
 
 export interface Faucet extends BaseContract {
-  connect(runner?: ContractRunner | null): Faucet;
-  waitForDeployment(): Promise<this>;
+  connect(signerOrProvider: Signer | Provider | string): this;
+  attach(addressOrName: string): this;
+  deployed(): Promise<this>;
 
   interface: FaucetInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
+  queryFilter<TEvent extends TypedEvent>(
+    event: TypedEventFilter<TEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<TEvent>>;
 
-  on<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  listeners<TEvent extends TypedEvent>(
+    eventFilter?: TypedEventFilter<TEvent>
+  ): Array<TypedListener<TEvent>>;
+  listeners(eventName?: string): Array<Listener>;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
+  removeAllListeners(eventName?: string): this;
+  off: OnEvent<this>;
+  on: OnEvent<this>;
+  once: OnEvent<this>;
+  removeListener: OnEvent<this>;
 
-  once<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  functions: {
+    getToken(
+      tokenAddress: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  listeners<TCEvent extends TypedContractEvent>(
-    event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
-  listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
-    event?: TCEvent
-  ): Promise<this>;
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  getToken: TypedContractMethod<
-    [tokenAddress: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  isTrustedForwarder: TypedContractMethod<
-    [forwarder: AddressLike],
-    [boolean],
-    "view"
-  >;
-
-  onERC1155BatchReceived: TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish[],
       arg3: BigNumberish[],
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  onERC1155Received: TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish,
       arg3: BigNumberish,
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  trustedForwarder: TypedContractMethod<[], [string], "view">;
+    trustedForwarder(overrides?: CallOverrides): Promise<[string]>;
+  };
 
-  getFunction<T extends ContractMethod = ContractMethod>(
-    key: string | FunctionFragment
-  ): T;
+  getToken(
+    tokenAddress: string,
+    tokenId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
-  getFunction(
-    nameOrSignature: "getToken"
-  ): TypedContractMethod<
-    [tokenAddress: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "isTrustedForwarder"
-  ): TypedContractMethod<[forwarder: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "onERC1155BatchReceived"
-  ): TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+  isTrustedForwarder(
+    forwarder: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  onERC1155BatchReceived(
+    arg0: string,
+    arg1: string,
+    arg2: BigNumberish[],
+    arg3: BigNumberish[],
+    arg4: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  onERC1155Received(
+    arg0: string,
+    arg1: string,
+    arg2: BigNumberish,
+    arg3: BigNumberish,
+    arg4: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  trustedForwarder(overrides?: CallOverrides): Promise<string>;
+
+  callStatic: {
+    getToken(
+      tokenAddress: string,
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish[],
       arg3: BigNumberish[],
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "onERC1155Received"
-  ): TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+      arg4: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish,
       arg3: BigNumberish,
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "trustedForwarder"
-  ): TypedContractMethod<[], [string], "view">;
+      arg4: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<string>;
+  };
 
   filters: {};
+
+  estimateGas: {
+    getToken(
+      tokenAddress: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<BigNumber>;
+  };
+
+  populateTransaction: {
+    getToken(
+      tokenAddress: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+  };
 }

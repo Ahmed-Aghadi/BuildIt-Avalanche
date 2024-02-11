@@ -2,19 +2,14 @@
 /* tslint:disable */
 /* eslint-disable */
 import {
+  Signer,
+  utils,
   Contract,
   ContractFactory,
-  ContractTransactionResponse,
-  Interface,
-} from "ethers";
-import type {
-  Signer,
   BigNumberish,
-  AddressLike,
-  ContractDeployTransaction,
-  ContractRunner,
+  Overrides,
 } from "ethers";
-import type { NonPayableOverrides } from "../common";
+import type { Provider, TransactionRequest } from "@ethersproject/providers";
 import type { Map, MapInterface } from "../Map";
 
 const _abi = [
@@ -938,14 +933,31 @@ export class Map__factory extends ContractFactory {
     }
   }
 
+  override deploy(
+    _size: BigNumberish,
+    _perSize: BigNumberish,
+    _baseUri: string,
+    _utilsAddress: string,
+    trustedForwarder: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<Map> {
+    return super.deploy(
+      _size,
+      _perSize,
+      _baseUri,
+      _utilsAddress,
+      trustedForwarder,
+      overrides || {}
+    ) as Promise<Map>;
+  }
   override getDeployTransaction(
     _size: BigNumberish,
     _perSize: BigNumberish,
     _baseUri: string,
-    _utilsAddress: AddressLike,
-    trustedForwarder: AddressLike,
-    overrides?: NonPayableOverrides & { from?: string }
-  ): Promise<ContractDeployTransaction> {
+    _utilsAddress: string,
+    trustedForwarder: string,
+    overrides?: Overrides & { from?: string }
+  ): TransactionRequest {
     return super.getDeployTransaction(
       _size,
       _perSize,
@@ -955,37 +967,19 @@ export class Map__factory extends ContractFactory {
       overrides || {}
     );
   }
-  override deploy(
-    _size: BigNumberish,
-    _perSize: BigNumberish,
-    _baseUri: string,
-    _utilsAddress: AddressLike,
-    trustedForwarder: AddressLike,
-    overrides?: NonPayableOverrides & { from?: string }
-  ) {
-    return super.deploy(
-      _size,
-      _perSize,
-      _baseUri,
-      _utilsAddress,
-      trustedForwarder,
-      overrides || {}
-    ) as Promise<
-      Map & {
-        deploymentTransaction(): ContractTransactionResponse;
-      }
-    >;
+  override attach(address: string): Map {
+    return super.attach(address) as Map;
   }
-  override connect(runner: ContractRunner | null): Map__factory {
-    return super.connect(runner) as Map__factory;
+  override connect(signer: Signer): Map__factory {
+    return super.connect(signer) as Map__factory;
   }
 
   static readonly bytecode = _bytecode;
   static readonly abi = _abi;
   static createInterface(): MapInterface {
-    return new Interface(_abi) as MapInterface;
+    return new utils.Interface(_abi) as MapInterface;
   }
-  static connect(address: string, runner?: ContractRunner | null): Map {
-    return new Contract(address, _abi, runner) as unknown as Map;
+  static connect(address: string, signerOrProvider: Signer | Provider): Map {
+    return new Contract(address, _abi, signerOrProvider) as Map;
   }
 }

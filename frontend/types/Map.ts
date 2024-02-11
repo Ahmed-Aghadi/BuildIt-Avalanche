@@ -3,29 +3,67 @@
 /* eslint-disable */
 import type {
   BaseContract,
+  BigNumber,
   BigNumberish,
   BytesLike,
-  FunctionFragment,
-  Result,
-  Interface,
-  EventFragment,
-  AddressLike,
-  ContractRunner,
-  ContractMethod,
-  Listener,
+  CallOverrides,
+  ContractTransaction,
+  Overrides,
+  PopulatedTransaction,
+  Signer,
+  utils,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedDeferredTopicFilter,
-  TypedEventLog,
-  TypedLogDescription,
+  FunctionFragment,
+  Result,
+  EventFragment,
+} from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
+import type {
+  TypedEventFilter,
+  TypedEvent,
   TypedListener,
-  TypedContractMethod,
+  OnEvent,
 } from "./common";
 
-export interface MapInterface extends Interface {
+export interface MapInterface extends utils.Interface {
+  functions: {
+    "approve(address,uint256)": FunctionFragment;
+    "balanceOf(address)": FunctionFragment;
+    "baseUri()": FunctionFragment;
+    "getApproved(uint256)": FunctionFragment;
+    "isApprovedForAll(address,address)": FunctionFragment;
+    "isTrustedForwarder(address)": FunctionFragment;
+    "land(uint256)": FunctionFragment;
+    "landCount()": FunctionFragment;
+    "landIds(uint256,uint256)": FunctionFragment;
+    "map(uint256,uint256)": FunctionFragment;
+    "mint(uint256,uint256)": FunctionFragment;
+    "name()": FunctionFragment;
+    "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)": FunctionFragment;
+    "onERC1155Received(address,address,uint256,uint256,bytes)": FunctionFragment;
+    "ownerOf(uint256)": FunctionFragment;
+    "perSize()": FunctionFragment;
+    "placeItem(uint256,uint256,uint256)": FunctionFragment;
+    "placeItems(uint256[],uint256[],uint256[])": FunctionFragment;
+    "removeItem(uint256,uint256)": FunctionFragment;
+    "safeTransferFrom(address,address,uint256)": FunctionFragment;
+    "safeTransferFrom(address,address,uint256,bytes)": FunctionFragment;
+    "setApprovalForAll(address,bool)": FunctionFragment;
+    "size()": FunctionFragment;
+    "supportsInterface(bytes4)": FunctionFragment;
+    "symbol()": FunctionFragment;
+    "tokenURI(uint256)": FunctionFragment;
+    "transferFrom(address,address,uint256)": FunctionFragment;
+    "trustedForwarder()": FunctionFragment;
+    "updateItem(uint256,uint256,uint256)": FunctionFragment;
+    "updateItems(uint256[],uint256[],uint256[])": FunctionFragment;
+    "utilCount()": FunctionFragment;
+    "utilsAddress()": FunctionFragment;
+  };
+
   getFunction(
-    nameOrSignature:
+    nameOrSignatureOrTopic:
       | "approve"
       | "balanceOf"
       | "baseUri"
@@ -60,18 +98,11 @@ export interface MapInterface extends Interface {
       | "utilsAddress"
   ): FunctionFragment;
 
-  getEvent(
-    nameOrSignatureOrTopic: "Approval" | "ApprovalForAll" | "Transfer"
-  ): EventFragment;
-
   encodeFunctionData(
     functionFragment: "approve",
-    values: [AddressLike, BigNumberish]
+    values: [string, BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "balanceOf",
-    values: [AddressLike]
-  ): string;
+  encodeFunctionData(functionFragment: "balanceOf", values: [string]): string;
   encodeFunctionData(functionFragment: "baseUri", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "getApproved",
@@ -79,11 +110,11 @@ export interface MapInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "isApprovedForAll",
-    values: [AddressLike, AddressLike]
+    values: [string, string]
   ): string;
   encodeFunctionData(
     functionFragment: "isTrustedForwarder",
-    values: [AddressLike]
+    values: [string]
   ): string;
   encodeFunctionData(functionFragment: "land", values: [BigNumberish]): string;
   encodeFunctionData(functionFragment: "landCount", values?: undefined): string;
@@ -102,17 +133,11 @@ export interface MapInterface extends Interface {
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "onERC1155BatchReceived",
-    values: [
-      AddressLike,
-      AddressLike,
-      BigNumberish[],
-      BigNumberish[],
-      BytesLike
-    ]
+    values: [string, string, BigNumberish[], BigNumberish[], BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "onERC1155Received",
-    values: [AddressLike, AddressLike, BigNumberish, BigNumberish, BytesLike]
+    values: [string, string, BigNumberish, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "ownerOf",
@@ -133,15 +158,15 @@ export interface MapInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "safeTransferFrom(address,address,uint256)",
-    values: [AddressLike, AddressLike, BigNumberish]
+    values: [string, string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "safeTransferFrom(address,address,uint256,bytes)",
-    values: [AddressLike, AddressLike, BigNumberish, BytesLike]
+    values: [string, string, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "setApprovalForAll",
-    values: [AddressLike, boolean]
+    values: [string, boolean]
   ): string;
   encodeFunctionData(functionFragment: "size", values?: undefined): string;
   encodeFunctionData(
@@ -155,7 +180,7 @@ export interface MapInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "transferFrom",
-    values: [AddressLike, AddressLike, BigNumberish]
+    values: [string, string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "trustedForwarder",
@@ -246,506 +271,906 @@ export interface MapInterface extends Interface {
     functionFragment: "utilsAddress",
     data: BytesLike
   ): Result;
+
+  events: {
+    "Approval(address,address,uint256)": EventFragment;
+    "ApprovalForAll(address,address,bool)": EventFragment;
+    "Transfer(address,address,uint256)": EventFragment;
+  };
+
+  getEvent(nameOrSignatureOrTopic: "Approval"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "ApprovalForAll"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Transfer"): EventFragment;
 }
 
-export namespace ApprovalEvent {
-  export type InputTuple = [
-    owner: AddressLike,
-    approved: AddressLike,
-    tokenId: BigNumberish
-  ];
-  export type OutputTuple = [owner: string, approved: string, tokenId: bigint];
-  export interface OutputObject {
-    owner: string;
-    approved: string;
-    tokenId: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface ApprovalEventObject {
+  owner: string;
+  approved: string;
+  tokenId: BigNumber;
 }
+export type ApprovalEvent = TypedEvent<
+  [string, string, BigNumber],
+  ApprovalEventObject
+>;
 
-export namespace ApprovalForAllEvent {
-  export type InputTuple = [
-    owner: AddressLike,
-    operator: AddressLike,
-    approved: boolean
-  ];
-  export type OutputTuple = [
-    owner: string,
-    operator: string,
-    approved: boolean
-  ];
-  export interface OutputObject {
-    owner: string;
-    operator: string;
-    approved: boolean;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type ApprovalEventFilter = TypedEventFilter<ApprovalEvent>;
 
-export namespace TransferEvent {
-  export type InputTuple = [
-    from: AddressLike,
-    to: AddressLike,
-    tokenId: BigNumberish
-  ];
-  export type OutputTuple = [from: string, to: string, tokenId: bigint];
-  export interface OutputObject {
-    from: string;
-    to: string;
-    tokenId: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface ApprovalForAllEventObject {
+  owner: string;
+  operator: string;
+  approved: boolean;
 }
+export type ApprovalForAllEvent = TypedEvent<
+  [string, string, boolean],
+  ApprovalForAllEventObject
+>;
+
+export type ApprovalForAllEventFilter = TypedEventFilter<ApprovalForAllEvent>;
+
+export interface TransferEventObject {
+  from: string;
+  to: string;
+  tokenId: BigNumber;
+}
+export type TransferEvent = TypedEvent<
+  [string, string, BigNumber],
+  TransferEventObject
+>;
+
+export type TransferEventFilter = TypedEventFilter<TransferEvent>;
 
 export interface Map extends BaseContract {
-  connect(runner?: ContractRunner | null): Map;
-  waitForDeployment(): Promise<this>;
+  connect(signerOrProvider: Signer | Provider | string): this;
+  attach(addressOrName: string): this;
+  deployed(): Promise<this>;
 
   interface: MapInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
+  queryFilter<TEvent extends TypedEvent>(
+    event: TypedEventFilter<TEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<TEvent>>;
 
-  on<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  listeners<TEvent extends TypedEvent>(
+    eventFilter?: TypedEventFilter<TEvent>
+  ): Array<TypedListener<TEvent>>;
+  listeners(eventName?: string): Array<Listener>;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
+  removeAllListeners(eventName?: string): this;
+  off: OnEvent<this>;
+  on: OnEvent<this>;
+  once: OnEvent<this>;
+  removeListener: OnEvent<this>;
 
-  once<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  functions: {
+    approve(
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  listeners<TCEvent extends TypedContractEvent>(
-    event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
-  listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
-    event?: TCEvent
-  ): Promise<this>;
+    balanceOf(owner: string, overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  approve: TypedContractMethod<
-    [to: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    baseUri(overrides?: CallOverrides): Promise<[string]>;
 
-  balanceOf: TypedContractMethod<[owner: AddressLike], [bigint], "view">;
+    getApproved(
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
 
-  baseUri: TypedContractMethod<[], [string], "view">;
+    isApprovedForAll(
+      owner: string,
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  getApproved: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  isApprovedForAll: TypedContractMethod<
-    [owner: AddressLike, operator: AddressLike],
-    [boolean],
-    "view"
-  >;
+    land(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber] & { xIndex: BigNumber; yIndex: BigNumber }
+    >;
 
-  isTrustedForwarder: TypedContractMethod<
-    [forwarder: AddressLike],
-    [boolean],
-    "view"
-  >;
+    landCount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  land: TypedContractMethod<
-    [arg0: BigNumberish],
-    [[bigint, bigint] & { xIndex: bigint; yIndex: bigint }],
-    "view"
-  >;
+    landIds(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
-  landCount: TypedContractMethod<[], [bigint], "view">;
+    map(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
-  landIds: TypedContractMethod<
-    [arg0: BigNumberish, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
+    mint(
+      xIndex: BigNumberish,
+      yIndex: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  map: TypedContractMethod<
-    [arg0: BigNumberish, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
+    name(overrides?: CallOverrides): Promise<[string]>;
 
-  mint: TypedContractMethod<
-    [xIndex: BigNumberish, yIndex: BigNumberish],
-    [bigint],
-    "nonpayable"
-  >;
-
-  name: TypedContractMethod<[], [string], "view">;
-
-  onERC1155BatchReceived: TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish[],
       arg3: BigNumberish[],
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  onERC1155Received: TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish,
       arg3: BigNumberish,
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  ownerOf: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
-
-  perSize: TypedContractMethod<[], [bigint], "view">;
-
-  placeItem: TypedContractMethod<
-    [x: BigNumberish, y: BigNumberish, utilId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  placeItems: TypedContractMethod<
-    [x: BigNumberish[], y: BigNumberish[], utilId: BigNumberish[]],
-    [void],
-    "nonpayable"
-  >;
-
-  removeItem: TypedContractMethod<
-    [x: BigNumberish, y: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  "safeTransferFrom(address,address,uint256)": TypedContractMethod<
-    [from: AddressLike, to: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  "safeTransferFrom(address,address,uint256,bytes)": TypedContractMethod<
-    [
-      from: AddressLike,
-      to: AddressLike,
+    ownerOf(
       tokenId: BigNumberish,
-      data: BytesLike
-    ],
-    [void],
-    "nonpayable"
-  >;
+      overrides?: CallOverrides
+    ): Promise<[string]>;
 
-  setApprovalForAll: TypedContractMethod<
-    [operator: AddressLike, approved: boolean],
-    [void],
-    "nonpayable"
-  >;
+    perSize(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  size: TypedContractMethod<[], [bigint], "view">;
+    placeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  supportsInterface: TypedContractMethod<
-    [interfaceId: BytesLike],
-    [boolean],
-    "view"
-  >;
+    placeItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  symbol: TypedContractMethod<[], [string], "view">;
+    removeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  tokenURI: TypedContractMethod<[id: BigNumberish], [string], "view">;
+    "safeTransferFrom(address,address,uint256)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  transferFrom: TypedContractMethod<
-    [from: AddressLike, to: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    "safeTransferFrom(address,address,uint256,bytes)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  trustedForwarder: TypedContractMethod<[], [string], "view">;
+    setApprovalForAll(
+      operator: string,
+      approved: boolean,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  updateItem: TypedContractMethod<
-    [x: BigNumberish, y: BigNumberish, utilId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    size(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  updateItems: TypedContractMethod<
-    [x: BigNumberish[], y: BigNumberish[], utilId: BigNumberish[]],
-    [void],
-    "nonpayable"
-  >;
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  utilCount: TypedContractMethod<[], [bigint], "view">;
+    symbol(overrides?: CallOverrides): Promise<[string]>;
 
-  utilsAddress: TypedContractMethod<[], [string], "view">;
+    tokenURI(id: BigNumberish, overrides?: CallOverrides): Promise<[string]>;
 
-  getFunction<T extends ContractMethod = ContractMethod>(
-    key: string | FunctionFragment
-  ): T;
+    transferFrom(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  getFunction(
-    nameOrSignature: "approve"
-  ): TypedContractMethod<
-    [to: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "balanceOf"
-  ): TypedContractMethod<[owner: AddressLike], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "baseUri"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "getApproved"
-  ): TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
-  getFunction(
-    nameOrSignature: "isApprovedForAll"
-  ): TypedContractMethod<
-    [owner: AddressLike, operator: AddressLike],
-    [boolean],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "isTrustedForwarder"
-  ): TypedContractMethod<[forwarder: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "land"
-  ): TypedContractMethod<
-    [arg0: BigNumberish],
-    [[bigint, bigint] & { xIndex: bigint; yIndex: bigint }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "landCount"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "landIds"
-  ): TypedContractMethod<
-    [arg0: BigNumberish, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "map"
-  ): TypedContractMethod<
-    [arg0: BigNumberish, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "mint"
-  ): TypedContractMethod<
-    [xIndex: BigNumberish, yIndex: BigNumberish],
-    [bigint],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "name"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "onERC1155BatchReceived"
-  ): TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+    trustedForwarder(overrides?: CallOverrides): Promise<[string]>;
+
+    updateItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    updateItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    utilCount(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    utilsAddress(overrides?: CallOverrides): Promise<[string]>;
+  };
+
+  approve(
+    to: string,
+    tokenId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  balanceOf(owner: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+  baseUri(overrides?: CallOverrides): Promise<string>;
+
+  getApproved(
+    tokenId: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>;
+
+  isApprovedForAll(
+    owner: string,
+    operator: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  isTrustedForwarder(
+    forwarder: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  land(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber] & { xIndex: BigNumber; yIndex: BigNumber }>;
+
+  landCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+  landIds(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
+  map(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
+  mint(
+    xIndex: BigNumberish,
+    yIndex: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  name(overrides?: CallOverrides): Promise<string>;
+
+  onERC1155BatchReceived(
+    arg0: string,
+    arg1: string,
+    arg2: BigNumberish[],
+    arg3: BigNumberish[],
+    arg4: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  onERC1155Received(
+    arg0: string,
+    arg1: string,
+    arg2: BigNumberish,
+    arg3: BigNumberish,
+    arg4: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  ownerOf(tokenId: BigNumberish, overrides?: CallOverrides): Promise<string>;
+
+  perSize(overrides?: CallOverrides): Promise<BigNumber>;
+
+  placeItem(
+    x: BigNumberish,
+    y: BigNumberish,
+    utilId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  placeItems(
+    x: BigNumberish[],
+    y: BigNumberish[],
+    utilId: BigNumberish[],
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  removeItem(
+    x: BigNumberish,
+    y: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  "safeTransferFrom(address,address,uint256)"(
+    from: string,
+    to: string,
+    tokenId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  "safeTransferFrom(address,address,uint256,bytes)"(
+    from: string,
+    to: string,
+    tokenId: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  setApprovalForAll(
+    operator: string,
+    approved: boolean,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  size(overrides?: CallOverrides): Promise<BigNumber>;
+
+  supportsInterface(
+    interfaceId: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  symbol(overrides?: CallOverrides): Promise<string>;
+
+  tokenURI(id: BigNumberish, overrides?: CallOverrides): Promise<string>;
+
+  transferFrom(
+    from: string,
+    to: string,
+    tokenId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  trustedForwarder(overrides?: CallOverrides): Promise<string>;
+
+  updateItem(
+    x: BigNumberish,
+    y: BigNumberish,
+    utilId: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  updateItems(
+    x: BigNumberish[],
+    y: BigNumberish[],
+    utilId: BigNumberish[],
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  utilCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+  utilsAddress(overrides?: CallOverrides): Promise<string>;
+
+  callStatic: {
+    approve(
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    balanceOf(owner: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    baseUri(overrides?: CallOverrides): Promise<string>;
+
+    getApproved(
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    isApprovedForAll(
+      owner: string,
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    land(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber] & { xIndex: BigNumber; yIndex: BigNumber }
+    >;
+
+    landCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    landIds(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    map(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    mint(
+      xIndex: BigNumberish,
+      yIndex: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    name(overrides?: CallOverrides): Promise<string>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish[],
       arg3: BigNumberish[],
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "onERC1155Received"
-  ): TypedContractMethod<
-    [
-      arg0: AddressLike,
-      arg1: AddressLike,
+      arg4: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
       arg2: BigNumberish,
       arg3: BigNumberish,
-      arg4: BytesLike
-    ],
-    [string],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "ownerOf"
-  ): TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
-  getFunction(
-    nameOrSignature: "perSize"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "placeItem"
-  ): TypedContractMethod<
-    [x: BigNumberish, y: BigNumberish, utilId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "placeItems"
-  ): TypedContractMethod<
-    [x: BigNumberish[], y: BigNumberish[], utilId: BigNumberish[]],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "removeItem"
-  ): TypedContractMethod<
-    [x: BigNumberish, y: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "safeTransferFrom(address,address,uint256)"
-  ): TypedContractMethod<
-    [from: AddressLike, to: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "safeTransferFrom(address,address,uint256,bytes)"
-  ): TypedContractMethod<
-    [
-      from: AddressLike,
-      to: AddressLike,
-      tokenId: BigNumberish,
-      data: BytesLike
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "setApprovalForAll"
-  ): TypedContractMethod<
-    [operator: AddressLike, approved: boolean],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "size"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "supportsInterface"
-  ): TypedContractMethod<[interfaceId: BytesLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "symbol"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "tokenURI"
-  ): TypedContractMethod<[id: BigNumberish], [string], "view">;
-  getFunction(
-    nameOrSignature: "transferFrom"
-  ): TypedContractMethod<
-    [from: AddressLike, to: AddressLike, tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "trustedForwarder"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "updateItem"
-  ): TypedContractMethod<
-    [x: BigNumberish, y: BigNumberish, utilId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "updateItems"
-  ): TypedContractMethod<
-    [x: BigNumberish[], y: BigNumberish[], utilId: BigNumberish[]],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "utilCount"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "utilsAddress"
-  ): TypedContractMethod<[], [string], "view">;
+      arg4: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
 
-  getEvent(
-    key: "Approval"
-  ): TypedContractEvent<
-    ApprovalEvent.InputTuple,
-    ApprovalEvent.OutputTuple,
-    ApprovalEvent.OutputObject
-  >;
-  getEvent(
-    key: "ApprovalForAll"
-  ): TypedContractEvent<
-    ApprovalForAllEvent.InputTuple,
-    ApprovalForAllEvent.OutputTuple,
-    ApprovalForAllEvent.OutputObject
-  >;
-  getEvent(
-    key: "Transfer"
-  ): TypedContractEvent<
-    TransferEvent.InputTuple,
-    TransferEvent.OutputTuple,
-    TransferEvent.OutputObject
-  >;
+    ownerOf(tokenId: BigNumberish, overrides?: CallOverrides): Promise<string>;
+
+    perSize(overrides?: CallOverrides): Promise<BigNumber>;
+
+    placeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    placeItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    removeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "safeTransferFrom(address,address,uint256)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "safeTransferFrom(address,address,uint256,bytes)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setApprovalForAll(
+      operator: string,
+      approved: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    size(overrides?: CallOverrides): Promise<BigNumber>;
+
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    symbol(overrides?: CallOverrides): Promise<string>;
+
+    tokenURI(id: BigNumberish, overrides?: CallOverrides): Promise<string>;
+
+    transferFrom(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<string>;
+
+    updateItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    updateItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    utilCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    utilsAddress(overrides?: CallOverrides): Promise<string>;
+  };
 
   filters: {
-    "Approval(address,address,uint256)": TypedContractEvent<
-      ApprovalEvent.InputTuple,
-      ApprovalEvent.OutputTuple,
-      ApprovalEvent.OutputObject
-    >;
-    Approval: TypedContractEvent<
-      ApprovalEvent.InputTuple,
-      ApprovalEvent.OutputTuple,
-      ApprovalEvent.OutputObject
-    >;
+    "Approval(address,address,uint256)"(
+      owner?: string | null,
+      approved?: string | null,
+      tokenId?: BigNumberish | null
+    ): ApprovalEventFilter;
+    Approval(
+      owner?: string | null,
+      approved?: string | null,
+      tokenId?: BigNumberish | null
+    ): ApprovalEventFilter;
 
-    "ApprovalForAll(address,address,bool)": TypedContractEvent<
-      ApprovalForAllEvent.InputTuple,
-      ApprovalForAllEvent.OutputTuple,
-      ApprovalForAllEvent.OutputObject
-    >;
-    ApprovalForAll: TypedContractEvent<
-      ApprovalForAllEvent.InputTuple,
-      ApprovalForAllEvent.OutputTuple,
-      ApprovalForAllEvent.OutputObject
-    >;
+    "ApprovalForAll(address,address,bool)"(
+      owner?: string | null,
+      operator?: string | null,
+      approved?: null
+    ): ApprovalForAllEventFilter;
+    ApprovalForAll(
+      owner?: string | null,
+      operator?: string | null,
+      approved?: null
+    ): ApprovalForAllEventFilter;
 
-    "Transfer(address,address,uint256)": TypedContractEvent<
-      TransferEvent.InputTuple,
-      TransferEvent.OutputTuple,
-      TransferEvent.OutputObject
-    >;
-    Transfer: TypedContractEvent<
-      TransferEvent.InputTuple,
-      TransferEvent.OutputTuple,
-      TransferEvent.OutputObject
-    >;
+    "Transfer(address,address,uint256)"(
+      from?: string | null,
+      to?: string | null,
+      tokenId?: BigNumberish | null
+    ): TransferEventFilter;
+    Transfer(
+      from?: string | null,
+      to?: string | null,
+      tokenId?: BigNumberish | null
+    ): TransferEventFilter;
+  };
+
+  estimateGas: {
+    approve(
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    balanceOf(owner: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    baseUri(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getApproved(
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    isApprovedForAll(
+      owner: string,
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    land(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
+
+    landCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    landIds(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    map(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    mint(
+      xIndex: BigNumberish,
+      yIndex: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    name(overrides?: CallOverrides): Promise<BigNumber>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    ownerOf(
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    perSize(overrides?: CallOverrides): Promise<BigNumber>;
+
+    placeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    placeItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    removeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    "safeTransferFrom(address,address,uint256)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    "safeTransferFrom(address,address,uint256,bytes)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    setApprovalForAll(
+      operator: string,
+      approved: boolean,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    size(overrides?: CallOverrides): Promise<BigNumber>;
+
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    symbol(overrides?: CallOverrides): Promise<BigNumber>;
+
+    tokenURI(id: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
+
+    transferFrom(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<BigNumber>;
+
+    updateItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    updateItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    utilCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    utilsAddress(overrides?: CallOverrides): Promise<BigNumber>;
+  };
+
+  populateTransaction: {
+    approve(
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    balanceOf(
+      owner: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    baseUri(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    getApproved(
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    isApprovedForAll(
+      owner: string,
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    isTrustedForwarder(
+      forwarder: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    land(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    landCount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    landIds(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    map(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    mint(
+      xIndex: BigNumberish,
+      yIndex: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    name(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    onERC1155BatchReceived(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    onERC1155Received(
+      arg0: string,
+      arg1: string,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    ownerOf(
+      tokenId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    perSize(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    placeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    placeItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    removeItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    "safeTransferFrom(address,address,uint256)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    "safeTransferFrom(address,address,uint256,bytes)"(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    setApprovalForAll(
+      operator: string,
+      approved: boolean,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    size(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    tokenURI(
+      id: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    transferFrom(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    trustedForwarder(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    updateItem(
+      x: BigNumberish,
+      y: BigNumberish,
+      utilId: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    updateItems(
+      x: BigNumberish[],
+      y: BigNumberish[],
+      utilId: BigNumberish[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    utilCount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    utilsAddress(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

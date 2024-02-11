@@ -3,30 +3,33 @@
 /* eslint-disable */
 import type {
   BaseContract,
+  BigNumber,
   BigNumberish,
   BytesLike,
-  FunctionFragment,
-  Result,
-  Interface,
-  EventFragment,
-  AddressLike,
-  ContractRunner,
-  ContractMethod,
-  Listener,
+  CallOverrides,
+  ContractTransaction,
+  PayableOverrides,
+  PopulatedTransaction,
+  Signer,
+  utils,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedDeferredTopicFilter,
-  TypedEventLog,
-  TypedLogDescription,
+  FunctionFragment,
+  Result,
+  EventFragment,
+} from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
+import type {
+  TypedEventFilter,
+  TypedEvent,
   TypedListener,
-  TypedContractMethod,
+  OnEvent,
 } from "./common";
 
 export declare namespace ERC2771Forwarder {
   export type ForwardRequestDataStruct = {
-    from: AddressLike;
-    to: AddressLike;
+    from: string;
+    to: string;
     value: BigNumberish;
     gas: BigNumberish;
     deadline: BigNumberish;
@@ -35,37 +38,41 @@ export declare namespace ERC2771Forwarder {
   };
 
   export type ForwardRequestDataStructOutput = [
-    from: string,
-    to: string,
-    value: bigint,
-    gas: bigint,
-    deadline: bigint,
-    data: string,
-    signature: string
+    string,
+    string,
+    BigNumber,
+    BigNumber,
+    number,
+    string,
+    string
   ] & {
     from: string;
     to: string;
-    value: bigint;
-    gas: bigint;
-    deadline: bigint;
+    value: BigNumber;
+    gas: BigNumber;
+    deadline: number;
     data: string;
     signature: string;
   };
 }
 
-export interface ForwarderInterface extends Interface {
+export interface ForwarderInterface extends utils.Interface {
+  functions: {
+    "eip712Domain()": FunctionFragment;
+    "execute((address,address,uint256,uint256,uint48,bytes,bytes))": FunctionFragment;
+    "executeBatch((address,address,uint256,uint256,uint48,bytes,bytes)[],address)": FunctionFragment;
+    "nonces(address)": FunctionFragment;
+    "verify((address,address,uint256,uint256,uint48,bytes,bytes))": FunctionFragment;
+  };
+
   getFunction(
-    nameOrSignature:
+    nameOrSignatureOrTopic:
       | "eip712Domain"
       | "execute"
       | "executeBatch"
       | "nonces"
       | "verify"
   ): FunctionFragment;
-
-  getEvent(
-    nameOrSignatureOrTopic: "EIP712DomainChanged" | "ExecutedForwardRequest"
-  ): EventFragment;
 
   encodeFunctionData(
     functionFragment: "eip712Domain",
@@ -77,9 +84,9 @@ export interface ForwarderInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "executeBatch",
-    values: [ERC2771Forwarder.ForwardRequestDataStruct[], AddressLike]
+    values: [ERC2771Forwarder.ForwardRequestDataStruct[], string]
   ): string;
-  encodeFunctionData(functionFragment: "nonces", values: [AddressLike]): string;
+  encodeFunctionData(functionFragment: "nonces", values: [string]): string;
   encodeFunctionData(
     functionFragment: "verify",
     values: [ERC2771Forwarder.ForwardRequestDataStruct]
@@ -96,203 +103,224 @@ export interface ForwarderInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "nonces", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
+
+  events: {
+    "EIP712DomainChanged()": EventFragment;
+    "ExecutedForwardRequest(address,uint256,bool)": EventFragment;
+  };
+
+  getEvent(nameOrSignatureOrTopic: "EIP712DomainChanged"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "ExecutedForwardRequest"): EventFragment;
 }
 
-export namespace EIP712DomainChangedEvent {
-  export type InputTuple = [];
-  export type OutputTuple = [];
-  export interface OutputObject {}
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export interface EIP712DomainChangedEventObject {}
+export type EIP712DomainChangedEvent = TypedEvent<
+  [],
+  EIP712DomainChangedEventObject
+>;
 
-export namespace ExecutedForwardRequestEvent {
-  export type InputTuple = [
-    signer: AddressLike,
-    nonce: BigNumberish,
-    success: boolean
-  ];
-  export type OutputTuple = [signer: string, nonce: bigint, success: boolean];
-  export interface OutputObject {
-    signer: string;
-    nonce: bigint;
-    success: boolean;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export type EIP712DomainChangedEventFilter =
+  TypedEventFilter<EIP712DomainChangedEvent>;
+
+export interface ExecutedForwardRequestEventObject {
+  signer: string;
+  nonce: BigNumber;
+  success: boolean;
 }
+export type ExecutedForwardRequestEvent = TypedEvent<
+  [string, BigNumber, boolean],
+  ExecutedForwardRequestEventObject
+>;
+
+export type ExecutedForwardRequestEventFilter =
+  TypedEventFilter<ExecutedForwardRequestEvent>;
 
 export interface Forwarder extends BaseContract {
-  connect(runner?: ContractRunner | null): Forwarder;
-  waitForDeployment(): Promise<this>;
+  connect(signerOrProvider: Signer | Provider | string): this;
+  attach(addressOrName: string): this;
+  deployed(): Promise<this>;
 
   interface: ForwarderInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
+  queryFilter<TEvent extends TypedEvent>(
+    event: TypedEventFilter<TEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<TEvent>>;
 
-  on<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  listeners<TEvent extends TypedEvent>(
+    eventFilter?: TypedEventFilter<TEvent>
+  ): Array<TypedListener<TEvent>>;
+  listeners(eventName?: string): Array<Listener>;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
+  removeAllListeners(eventName?: string): this;
+  off: OnEvent<this>;
+  on: OnEvent<this>;
+  once: OnEvent<this>;
+  removeListener: OnEvent<this>;
 
-  once<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-
-  listeners<TCEvent extends TypedContractEvent>(
-    event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
-  listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
-    event?: TCEvent
-  ): Promise<this>;
-
-  eip712Domain: TypedContractMethod<
-    [],
-    [
-      [string, string, string, bigint, string, string, bigint[]] & {
+  functions: {
+    eip712Domain(
+      overrides?: CallOverrides
+    ): Promise<
+      [string, string, string, BigNumber, string, string, BigNumber[]] & {
         fields: string;
         name: string;
         version: string;
-        chainId: bigint;
+        chainId: BigNumber;
         verifyingContract: string;
         salt: string;
-        extensions: bigint[];
+        extensions: BigNumber[];
       }
-    ],
-    "view"
-  >;
+    >;
 
-  execute: TypedContractMethod<
-    [request: ERC2771Forwarder.ForwardRequestDataStruct],
-    [void],
-    "payable"
-  >;
+    execute(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-  executeBatch: TypedContractMethod<
-    [
+    executeBatch(
       requests: ERC2771Forwarder.ForwardRequestDataStruct[],
-      refundReceiver: AddressLike
-    ],
-    [void],
-    "payable"
+      refundReceiver: string,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    nonces(owner: string, overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    verify(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
+  };
+
+  eip712Domain(
+    overrides?: CallOverrides
+  ): Promise<
+    [string, string, string, BigNumber, string, string, BigNumber[]] & {
+      fields: string;
+      name: string;
+      version: string;
+      chainId: BigNumber;
+      verifyingContract: string;
+      salt: string;
+      extensions: BigNumber[];
+    }
   >;
 
-  nonces: TypedContractMethod<[owner: AddressLike], [bigint], "view">;
+  execute(
+    request: ERC2771Forwarder.ForwardRequestDataStruct,
+    overrides?: PayableOverrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
-  verify: TypedContractMethod<
-    [request: ERC2771Forwarder.ForwardRequestDataStruct],
-    [boolean],
-    "view"
-  >;
+  executeBatch(
+    requests: ERC2771Forwarder.ForwardRequestDataStruct[],
+    refundReceiver: string,
+    overrides?: PayableOverrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
-  getFunction<T extends ContractMethod = ContractMethod>(
-    key: string | FunctionFragment
-  ): T;
+  nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>;
 
-  getFunction(
-    nameOrSignature: "eip712Domain"
-  ): TypedContractMethod<
-    [],
-    [
-      [string, string, string, bigint, string, string, bigint[]] & {
+  verify(
+    request: ERC2771Forwarder.ForwardRequestDataStruct,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  callStatic: {
+    eip712Domain(
+      overrides?: CallOverrides
+    ): Promise<
+      [string, string, string, BigNumber, string, string, BigNumber[]] & {
         fields: string;
         name: string;
         version: string;
-        chainId: bigint;
+        chainId: BigNumber;
         verifyingContract: string;
         salt: string;
-        extensions: bigint[];
+        extensions: BigNumber[];
       }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "execute"
-  ): TypedContractMethod<
-    [request: ERC2771Forwarder.ForwardRequestDataStruct],
-    [void],
-    "payable"
-  >;
-  getFunction(
-    nameOrSignature: "executeBatch"
-  ): TypedContractMethod<
-    [
-      requests: ERC2771Forwarder.ForwardRequestDataStruct[],
-      refundReceiver: AddressLike
-    ],
-    [void],
-    "payable"
-  >;
-  getFunction(
-    nameOrSignature: "nonces"
-  ): TypedContractMethod<[owner: AddressLike], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "verify"
-  ): TypedContractMethod<
-    [request: ERC2771Forwarder.ForwardRequestDataStruct],
-    [boolean],
-    "view"
-  >;
+    >;
 
-  getEvent(
-    key: "EIP712DomainChanged"
-  ): TypedContractEvent<
-    EIP712DomainChangedEvent.InputTuple,
-    EIP712DomainChangedEvent.OutputTuple,
-    EIP712DomainChangedEvent.OutputObject
-  >;
-  getEvent(
-    key: "ExecutedForwardRequest"
-  ): TypedContractEvent<
-    ExecutedForwardRequestEvent.InputTuple,
-    ExecutedForwardRequestEvent.OutputTuple,
-    ExecutedForwardRequestEvent.OutputObject
-  >;
+    execute(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    executeBatch(
+      requests: ERC2771Forwarder.ForwardRequestDataStruct[],
+      refundReceiver: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    verify(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+  };
 
   filters: {
-    "EIP712DomainChanged()": TypedContractEvent<
-      EIP712DomainChangedEvent.InputTuple,
-      EIP712DomainChangedEvent.OutputTuple,
-      EIP712DomainChangedEvent.OutputObject
-    >;
-    EIP712DomainChanged: TypedContractEvent<
-      EIP712DomainChangedEvent.InputTuple,
-      EIP712DomainChangedEvent.OutputTuple,
-      EIP712DomainChangedEvent.OutputObject
-    >;
+    "EIP712DomainChanged()"(): EIP712DomainChangedEventFilter;
+    EIP712DomainChanged(): EIP712DomainChangedEventFilter;
 
-    "ExecutedForwardRequest(address,uint256,bool)": TypedContractEvent<
-      ExecutedForwardRequestEvent.InputTuple,
-      ExecutedForwardRequestEvent.OutputTuple,
-      ExecutedForwardRequestEvent.OutputObject
-    >;
-    ExecutedForwardRequest: TypedContractEvent<
-      ExecutedForwardRequestEvent.InputTuple,
-      ExecutedForwardRequestEvent.OutputTuple,
-      ExecutedForwardRequestEvent.OutputObject
-    >;
+    "ExecutedForwardRequest(address,uint256,bool)"(
+      signer?: string | null,
+      nonce?: null,
+      success?: null
+    ): ExecutedForwardRequestEventFilter;
+    ExecutedForwardRequest(
+      signer?: string | null,
+      nonce?: null,
+      success?: null
+    ): ExecutedForwardRequestEventFilter;
+  };
+
+  estimateGas: {
+    eip712Domain(overrides?: CallOverrides): Promise<BigNumber>;
+
+    execute(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    executeBatch(
+      requests: ERC2771Forwarder.ForwardRequestDataStruct[],
+      refundReceiver: string,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    verify(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+  };
+
+  populateTransaction: {
+    eip712Domain(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    execute(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    executeBatch(
+      requests: ERC2771Forwarder.ForwardRequestDataStruct[],
+      refundReceiver: string,
+      overrides?: PayableOverrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    nonces(
+      owner: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    verify(
+      request: ERC2771Forwarder.ForwardRequestDataStruct,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
   };
 }
