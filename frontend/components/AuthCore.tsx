@@ -1,6 +1,7 @@
 "use client";
 
 import { ModalProvider } from "@particle-network/connectkit";
+import { EntryPosition } from "@particle-network/wallet";
 import { AvalancheTestnet, EthereumSepolia } from "@particle-network/chains";
 import { evmWallets } from "@particle-network/connectors";
 import { MainSection } from "./MainSection";
@@ -19,6 +20,7 @@ export const AuthCore = () => {
           visible: true, //display wallet button when connect particle success.
           themeType: "dark", //optional: wallet theme, default light
           customStyle: {}, //optional: custom wallet style
+          entryPosition: EntryPosition.BR,
         },
         promptSettingConfig: {
           //optional: particle security account config
