@@ -12,7 +12,7 @@ Go to `client` folder.
 cd game/
 ```
 
-Open the `game` folder in Unity. Build the project and save build files in `frontend/public` directory.
+Open the `game` folder in Unity. Build the project and save build files in `frontend/public` directory ( You only need to do this step if you had made any changes to the game ).
 
 ### Frontend
 
@@ -30,6 +30,8 @@ npm run dev
 ```
 
 Visit `localhost:3000` to play the game.
+
+Note: Don't forget to create .env file ( refer .env.example file ).
 
 ### Smart Contracts
 
@@ -65,13 +67,15 @@ forge script script/DeployAll.s.sol:DeployAll --slow --chain-id 43113 --rpc-url 
 forge script script/DeployAll.s.sol:DeployAll --slow --chain-id 11155111 --rpc-url $SEPOLIA_RPC_URL --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY --verifier-url "https://api-sepolia.etherscan.io/api" -vvvv
 ```
 
-If it the above command fails, you can also resume the deployment from the last failed step by using the `--resume` flag.
+If the above command fails, you can also resume the deployment from the last failed step by using the `--resume` flag.
 
-Note: Don't forget to make .env file, refer .env.example file.
+Note: Don't forget to create .env file ( refer .env.example file ).
 
 To set cross chain data for marketplace contract:
 
 ```bash
+source .env
+
 # Avalanche Testnet (Fuji)
 forge script script/SetCrossChainData.s.sol:SetCrossChainData --slow --rpc-url $AVALANCHE_FUJI_TESTNET_RPC_URL --broadcast -vvvv
 
@@ -93,23 +97,23 @@ node script/GenerateContractAddress.js
 
 ## Smart Contracts ( Avalanche Testnet (Fuji) )
 
-| Contract                                                                                                       | Explorer Link                                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| [Map.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Map.sol)                 | [0x3Ef5b3e0F317aBC0372b7BC2715AE734fd1cc72A](https://testnet.snowtrace.io/address/0x3Ef5b3e0F317aBC0372b7BC2715AE734fd1cc72A) |
-| [Utils.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Utils.sol)             | [0xAc8f976CE33462A9fD530977818897323C141503](https://testnet.snowtrace.io/address/0xAc8f976CE33462A9fD530977818897323C141503) |
-| [Faucet.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Faucet.sol)           | [0x3717c0A441189d828fFE2bdEc97485098CB1Dda2](https://testnet.snowtrace.io/address/0x3717c0A441189d828fFE2bdEc97485098CB1Dda2) |
-| [Marketplace.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Marketplace.sol) | [0x7616a954c1b1a51Af381426596Fe37Cf2CB7fEb5](https://testnet.snowtrace.io/address/0x7616a954c1b1a51Af381426596Fe37Cf2CB7fEb5) |
-| [Forwarder.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Forwarder.sol)     | [0x205c82Cf08A1d59b4428658edD0F812B7E48Fc31](https://testnet.snowtrace.io/address/0x205c82Cf08A1d59b4428658edD0F812B7E48Fc31) |
+| Contract                                                                                                           | Explorer Link                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| [Map.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Map.sol)                 | [0x3Ef5b3e0F317aBC0372b7BC2715AE734fd1cc72A](https://testnet.snowtrace.io/address/0x3Ef5b3e0F317aBC0372b7BC2715AE734fd1cc72A) |
+| [Utils.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Utils.sol)             | [0xAc8f976CE33462A9fD530977818897323C141503](https://testnet.snowtrace.io/address/0xAc8f976CE33462A9fD530977818897323C141503) |
+| [Faucet.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Faucet.sol)           | [0x3717c0A441189d828fFE2bdEc97485098CB1Dda2](https://testnet.snowtrace.io/address/0x3717c0A441189d828fFE2bdEc97485098CB1Dda2) |
+| [Marketplace.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Marketplace.sol) | [0x7616a954c1b1a51Af381426596Fe37Cf2CB7fEb5](https://testnet.snowtrace.io/address/0x7616a954c1b1a51Af381426596Fe37Cf2CB7fEb5) |
+| [Forwarder.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Forwarder.sol)     | [0x205c82Cf08A1d59b4428658edD0F812B7E48Fc31](https://testnet.snowtrace.io/address/0x205c82Cf08A1d59b4428658edD0F812B7E48Fc31) |
 
 ## Smart Contracts ( Ethereum Testnet (Sepolia) )
 
-| Contract                                                                                                       | Explorer Link                                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| [Map.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Map.sol)                 | [0xD6E9e0E67Ef73BC697145F378304223318C8a57B](https://sepolia.etherscan.io/address/0xD6E9e0E67Ef73BC697145F378304223318C8a57B) |
-| [Utils.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Utils.sol)             | [0x2FB5322CB7B9A39A650AC84b65cEEEcb710Cb136](https://sepolia.etherscan.io/address/0x2FB5322CB7B9A39A650AC84b65cEEEcb710Cb136) |
-| [Faucet.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Faucet.sol)           | [0x479A67aBfCeF629E6313BFd8c4a58cE5c16e0df2](https://sepolia.etherscan.io/address/0x479A67aBfCeF629E6313BFd8c4a58cE5c16e0df2) |
-| [Marketplace.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Marketplace.sol) | [0x2260550B934bB1FFf78ed0fBA057e3E226d04585](https://sepolia.etherscan.io/address/0x2260550B934bB1FFf78ed0fBA057e3E226d04585) |
-| [Forwarder.sol](https://github.com/Ahmed-Aghadi/BuildIt-Areon/blob/main/smart_contracts/src/Forwarder.sol)     | [0x7F69Bc509DC6922C1096f8bA95f50579f9cA655F](https://sepolia.etherscan.io/address/0x7F69Bc509DC6922C1096f8bA95f50579f9cA655F) |
+| Contract                                                                                                           | Explorer Link                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| [Map.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Map.sol)                 | [0xD6E9e0E67Ef73BC697145F378304223318C8a57B](https://sepolia.etherscan.io/address/0xD6E9e0E67Ef73BC697145F378304223318C8a57B) |
+| [Utils.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Utils.sol)             | [0x2FB5322CB7B9A39A650AC84b65cEEEcb710Cb136](https://sepolia.etherscan.io/address/0x2FB5322CB7B9A39A650AC84b65cEEEcb710Cb136) |
+| [Faucet.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Faucet.sol)           | [0x479A67aBfCeF629E6313BFd8c4a58cE5c16e0df2](https://sepolia.etherscan.io/address/0x479A67aBfCeF629E6313BFd8c4a58cE5c16e0df2) |
+| [Marketplace.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Marketplace.sol) | [0x2260550B934bB1FFf78ed0fBA057e3E226d04585](https://sepolia.etherscan.io/address/0x2260550B934bB1FFf78ed0fBA057e3E226d04585) |
+| [Forwarder.sol](https://github.com/Ahmed-Aghadi/BuildIt-Avalanche/blob/main/smart_contracts/src/Forwarder.sol)     | [0x7F69Bc509DC6922C1096f8bA95f50579f9cA655F](https://sepolia.etherscan.io/address/0x7F69Bc509DC6922C1096f8bA95f50579f9cA655F) |
 
 ## Table of Contents
 
